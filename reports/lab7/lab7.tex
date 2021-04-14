@@ -1,0 +1,203 @@
+\documentclass[a4paper,12pt]{report}
+
+%Русский язык
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english,russian]{babel}
+\usepackage{cmap}
+
+%Работа с кодом
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{green}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{red}{rgb}{0.6,0,0}
+
+\lstset{
+        language=Python, 
+        basicstyle=\small\ttfamily, 
+        numberstyle=\tiny,           
+        columns=flexible,
+        stepnumber=1,                   
+        numbersep=5pt,        
+        showspaces=false,
+        showstringspaces=false,
+        showtabs=false,
+        tabsize=2,                
+        captionpos=b,              
+        breaklines=true,           
+        breakatwhitespace=false,
+        keywordstyle=\color{green},
+        commentstyle=\color{gray},
+        stringstyle=\color{red},      
+}
+
+%Математика
+\usepackage{amsmath,amsfonts,amssymb,amsthm,mathtools} 
+
+%Изображения
+\usepackage{float}
+\usepackage{graphicx}
+\graphicspath{ {./img/} }
+
+%Поля страницы
+\usepackage{geometry} 
+\geometry{left=2.3cm} 
+\geometry{right=1.8cm} 
+\geometry{top=2cm} 
+\geometry{bottom=2.5cm} 
+
+%Отступы
+\usepackage{indentfirst}
+\setlength{\parskip}{0cm}
+
+\begin{document} 
+
+\begin{titlepage}
+\newpage
+	\begin{center}
+		\large Санкт-Петербургский политехнический университет Петра Великого\\
+		Институт компьютерных наук и технологий\\
+		Высшая школа интеллектуальных систем и суперкомпьютерных технологий\\
+	\end{center}
+\vspace{7cm}
+
+\begin{center}
+		\large \textbf{Отчёт по лабораторной работе №7} \\
+		\textbf{Дисциплина:} Телекоммуникационные технологии\\
+		\textbf{Тема:} Дискретное преобразование Фурье
+\end{center}
+\vspace{4cm}
+	
+\begin{flushright}
+		\large Работу выполнил:\\ Ляшенко В.В.\\
+		Группа: 3530901/80201\\
+		Преподаватель:\\ Богач Н.В.
+\end{flushright}
+
+\vspace{\fill}
+\begin{center}
+	\large Санкт-Петербург\\ 2021
+	\end{center}
+\end{titlepage}
+
+\tableofcontents
+\listoffigures
+\lstlistoflistings
+
+\chapter{Упражнение 7.1}
+    В начале мы должны для Jupyter загрузить \texttt{chap07.ipynb}, прочитать пояснения и запустить примеры.
+    
+    Все примеры были успешно запущены.
+
+\chapter{Упражнение 7.2} 
+\section{Алгоритм}
+    Реализуем алгоритм быстрого преобразования Фурье (БПФ), время работы которго $N \log N$. Для этого воспользуемся леммой Дэниелсона-Ланцоша. 
+\begin{equation}
+       DFT(y)[n] = DFT(e)[n]+exp(-2nin/N)DFT(o)[n]
+\end{equation}
+
+    В этой формуле DFT($y$)[n] - это $n$-й элемент ДПФ от $y$, $e$ и $o$ - массивы сигнала, содержащие соответственно четные и нечетные элементы $y$.
+    
+    Эта лемма предлагает рекурсивный алгоритм для ДПФ:
+\begin{enumerate} 
+  \item Дан массив сигнала $y$. Разделим его на чётные элементы $e$ и нечётные элементы $o$. 
+  \item Вычислим DFT $e$ и $o$, делая рекурсивные вызовы.
+  \item Вычислим DFT($y$) для каждого значения $n$, используя лемму Дэниелсона-Ланцоша. 
+\end{enumerate}
+
+    В простейшем случае эту рекурсию надо продолжать, пока длина $y$ не дойдет до 1. Тогда DFT($y$) = $y$. А если длина $y$ достаточно мала, можно вычислить его ДПФ перемножением матриц, используя заранее вычисленные матрицы.
+    
+\section{Реализация}
+    Возьмём небольшой сигнал и вычислим его БПФ с помощью имеющейся функции \texttt{np.fft.fft}.
+\begin{lstlisting}[caption=Вычисление БПФ с помощью np.fft.fft]
+       ys = [-0.3, 0.8, 0.6, -0.4]
+       hs = np.fft.fft(ys)
+       print(hs)
+\end{lstlisting}  
+\begin{lstlisting}[caption=Полученные результаты]
+       [ 0.7+0.j  -0.9-1.2j -0.1+0.j  -0.9+1.2j]
+\end{lstlisting}
+
+    Теперь реализуем функцию ДПФ.
+\begin{lstlisting}[caption=Функция dft]
+       def dft(ys):
+           N = len(ys)
+           ts = np.arange(N) / N
+           freqs = np.arange(N)
+           args = np.outer(ts, freqs)
+           M = np.exp(1j * PI2 * args)
+           amps = M.conj().transpose().dot(ys)
+           return amps
+\end{lstlisting} 
+    
+    Воспользуемся ей, чтобы убедиться, что результаты одинаковые. 
+\begin{lstlisting}[caption=Применение функции ДПФ]
+       hs2 = dft(ys)
+       np.sum(np.abs(hs - hs2))
+\end{lstlisting}  
+\begin{lstlisting}[caption=Полученные результаты]
+       1.0537365376317067e-15
+\end{lstlisting}
+
+    Как мы можем видеть, различия минимальны.
+    
+    Для того, чтобы создать рекурсивное БПФ, напишем функцию, которая разбивает входной массив и использует np.fft.fft для вычисления БПФ полученных половин.
+\begin{lstlisting}[caption=Функция fft\_norec]
+       def fft_norec(ys):
+           N = len(ys)
+           He = np.fft.fft(ys[::2])
+           Ho = np.fft.fft(ys[1::2])
+    
+           ns = np.arange(N)
+           W = np.exp(-1j * PI2 * ns / N)
+    
+           return np.tile(He, 2) + W * np.tile(Ho, 2)
+\end{lstlisting}  
+    
+    Применим эту функцию и убедимся, что результат тот же.
+\begin{lstlisting}[caption=Применение функции fft\_norec]
+       hs3 = fft_norec(ys)
+       np.sum(np.abs(hs - hs3))
+\end{lstlisting}  
+\begin{lstlisting}[caption=Полученные результаты]
+       3.820527793534411e-16
+\end{lstlisting} 
+
+    Разница также мала.
+    
+    Теперь реализуем функцию \texttt{fft}, где заменим np.fft.fft на рекурсивные вызовы.
+\begin{lstlisting}[caption=Функция fft]
+       def fft(ys):
+           N = len(ys)
+           if N == 1:
+               return ys
+    
+           He = fft(ys[::2])
+           Ho = fft(ys[1::2])
+    
+           ns = np.arange(N)
+           W = np.exp(-1j * PI2 * ns / N)
+    
+           return np.tile(He, 2) + W * np.tile(Ho, 2)
+\end{lstlisting}
+
+    Проверим её работу.
+\begin{lstlisting}[caption=Применение функции fft]
+       hs4 = fft(ys)
+       np.sum(np.abs(hs - hs4))
+\end{lstlisting}  
+\begin{lstlisting}[caption=Полученные результаты]
+       3.820527793534411e-16
+\end{lstlisting} 
+
+    Всё работает верно.
+    
+    Полученная реализация работает за $N \log N$, однако имеют недостатки - занимаемое пространство так же составляет $N \log N$, к тому же тратится время на создание и копирование массивов. 
+    
+    Функцию можно улучшить, реализовав работу «на месте».
+\chapter{Выводы}
+    В результате выполнения данной работы мы изучили дискретное преобразование Фурье и быстрое преобразование Фурье.
+    Во многих случаях достаточно ДПФ, которое работает за $N^2$, но иногда требуется БПФ, которое работает за $N \log N$.
+\end{document}
